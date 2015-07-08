@@ -1,0 +1,4 @@
+:name "executive"
+:node-sname "executive_edts"
+:lib-dirs '("deps" "test")
+:app-include-dirs '("include")

@@ -1,0 +1,15 @@
+{application, executive,
+ [
+  {description, ""},
+  {vsn, "0.1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  lager,
+                  lucet,
+                  flowcompiler
+                 ]},
+  {mod, {executive_app, []}},
+  {env, []}
+ ]}.
