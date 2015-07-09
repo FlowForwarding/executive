@@ -5,6 +5,8 @@ deps
 *.plt
 erl_crash.dump
 ebin
-rel/executive
+_rel/executive
 .rebar
 rebar
+id_rsa*
+priv/erl_sshd

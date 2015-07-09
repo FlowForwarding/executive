@@ -7,8 +7,8 @@
                   kernel,
                   stdlib,
                   lager,
-                  lucet,
-                  flowcompiler
+                  erl_sshd,
+                  lucet
                  ]},
   {mod, {executive_app, []}},
   {env, []}
