@@ -1,4 +1,4 @@
-.PHONY: compile get-deps update-deps clean deep-clean rel no-compile-rel rebar
+.PHONY: compile get-deps update-deps clean deep-clean no-compile-rel rel test rebar
 
 compile: get-deps
 	./rebar compile
@@ -19,6 +19,10 @@ no-compile-rel:
 	./relx -c _rel/relx.config
 
 rel: compile no-compile-rel
+
+test:
+	mkdir -p /tmp/ct_log
+	ct_run -pa deps/*/ebin -pa ebin/ -dir test/ -logdir /tmp/ct_log -noshell
 
 rebar:
 	wget -c https://github.com/rebar/rebar/wiki/rebar
