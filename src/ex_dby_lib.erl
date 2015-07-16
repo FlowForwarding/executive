@@ -6,6 +6,7 @@
          identifier_is_physical_host/1,
          identifier_is_virtual_host/1,
          host_patch_panel/1,
+         ports_patch_panel/2,
          update_patchp_wires/2,
          publish/2,
          physical_port/3,
@@ -85,6 +86,16 @@ host_patch_panel(PhIdentifier) ->
     dby:search(ex_dby_funs:mk_get_host_patchp(PhIdentifier),
                not_found,
                PhIdentifier,
+               [{max_depth, 2}]).
+
+
+-spec ports_patch_panel(dby_identifier(), dby_identifier()) -> dby_identifier()
+                                                                   | not_found.
+
+ports_patch_panel(PortId1, PortId2) ->
+    dby:search(ex_dby_funs:mk_get_ports_patchp(PortId1, PortId2),
+               not_found,
+               PortId1,
                [{max_depth, 2}]).
 
 

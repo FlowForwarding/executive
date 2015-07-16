@@ -25,7 +25,8 @@ all() ->
     [it_publishes_physical_host,
      it_publishes_virtual_host,
      it_publishes_of_switch,
-     it_publishes_endpoint].
+     it_publishes_endpoint,
+     it_binds_physical_ports].
 
 
 %%--------------------------------------------------------------------
@@ -197,6 +198,39 @@ it_publishes_endpoint(_Config) ->
           end).
 
 
+it_binds_physical_ports(_Config) ->
+    ?GIVEN(begin
+               publisher_server_is_running(),
+               [Ph1, Pp1, Ph2, Pp2] = bound_phs_args(string),
+               [Ph1Bin, Pp1Bin, Ph2Bin, Pp2Bin] = bound_phs_args(binary),
+               ClusterPatchp = <<"ClPatchp">>,
+               [expect_dby_lib(Fun, Args, Ret)
+                || {Fun, Args, Ret} <-
+                       [{identifier_is_physical_host, 1, true},
+                        {identifier_exists, 2, true},
+                        {identifier_exists, 2, true},
+                        {ports_patch_panel,
+                         [<<Ph1Bin/binary, "/", Pp1Bin/binary>>,
+                          <<Ph2Bin/binary, "/", Pp2Bin/binary>>],
+                         ClusterPatchp},
+                        {publish, 2, ok}]]
+           end),
+
+    ?WHEN(ex_publisher:bound_physical_hosts(Ph1, Pp1, Ph2, Pp2)),
+
+    ?THEN(begin
+              {Pp1DbyId, _} = physical_port_dby_ep(Ph1Bin, Pp1Bin, []),
+              {Pp2DbyId, _} = physical_port_dby_ep(Ph2Bin, Pp2Bin, []),
+              ExpectedPublish0 = [bound_to_dby_link(Pp1DbyId, Pp2DbyId)],
+              ActualPublish = meck:capture(first, ex_dby_lib, publish, '_', 2),
+              {value, {_, ActualFun}, ActualPublish1} =
+                  lists:keytake(ClusterPatchp, 1, ActualPublish),
+              ?assert(is_function(ActualFun, 1)),
+              ExpectedPublish1 = lists:sort(ExpectedPublish0),
+              ?assertEqual(ExpectedPublish1, lists:sort(ActualPublish1))
+          end).
+
+
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
@@ -218,6 +252,9 @@ publish_ofs_args(Type) ->
 
 publish_ep_args(Type) ->
     ex_test_utils:publish_endpoint_args(Type).
+
+bound_phs_args(Type) ->
+    ex_test_utils:bound_physical_hosts_args(Type).
 
 physical_port_dby_ep(Ph, Port, PortProperties) ->
     ex_test_utils:physical_port(Ph, Port, PortProperties).

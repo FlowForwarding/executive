@@ -3,7 +3,8 @@
 -export([publish_physical_host/3,
          publish_virtual_host/4,
          publish_of_switch/3,
-         publish_endpoint/3]).
+         publish_endpoint/3,
+         bound_physical_hosts/4]).
 
 -include("executive.hrl").
 -include("ex_logger.hrl").
@@ -98,6 +99,30 @@ publish_of_switch(VirtualHost, OfSwitch, Ports) ->
 
 publish_endpoint(VirtualHost, Endpoint, VirtualPortToBound) ->
     ex_publisher:publish_endpoint(VirtualHost, Endpoint, VirtualPortToBound).
+
+
+%% @doc The publisher creates a bound_to link between two Physical Ports
+%% of Physical Hosts.
+%%
+%% It is for marking connections in Dobby that were done manually by
+%% a Network Operator that connected two servers. The port is assumed
+%% to be part_of Cluster Patch Panel (a Patch Panel that aggregates
+%% all the physical ports).
+-spec bound_physical_hosts(string(), string(), string(), string()) ->
+                                  Result when
+      Result :: ok |
+                {error, Reason},
+      Reason :: {physical_not_exists, PhysicalHost :: binary()} |
+                {physical_port_not_exists, PhysicalPort :: binary()} |
+                {not_physical_host, PhysicalHost :: binary()} |
+                link_exists |
+                {port_already_bound, BusyPort :: binary()} |
+                term().
+
+bound_physical_hosts(PhysicalHost1, PhysicalPort1, PhysicalHost2,
+                     PhysicalPort2) ->
+    ex_publisher:bound_physical_hosts(PhysicalHost1, PhysicalPort1,
+                                      PhysicalHost2, PhysicalPort2).
 
 
 

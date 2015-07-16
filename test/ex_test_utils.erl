@@ -4,6 +4,7 @@
          publish_virtual_host_args/1,
          publish_of_switch_args/1,
          publish_endpoint_args/1,
+         bound_physical_hosts_args/1,
          physical_port/3,
          virtual_port/3,
          vif_port/3,
@@ -57,6 +58,12 @@ publish_endpoint_args(string) ->
     [_Vh = "PH1/VH1", _Ep = "EP1", _VpToBound = "VP1"];
 publish_endpoint_args(binary) ->
     [ex_dby_lib:binarize(identifier, X) || X <- publish_endpoint_args(string)].
+
+bound_physical_hosts_args(string) ->
+    ["PH1", "PP1", "PH2", "PP1"];
+bound_physical_hosts_args(binary) ->
+    [ex_dby_lib:binarize(identifier, X)
+     || X <- bound_physical_hosts_args(string)].
 
 patch_panel(PhName, Name, AttachedPorts) ->
     Wires = maps:from_list([{P, null} || P <- AttachedPorts]),
