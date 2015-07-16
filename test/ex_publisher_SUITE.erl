@@ -23,7 +23,8 @@ end_per_testcase(_TestCase, _Config) ->
 
 all() ->
     [it_publishes_physical_host,
-     it_publishes_virtual_host].
+     it_publishes_virtual_host,
+     it_publishes_of_switch].
 
 
 %%--------------------------------------------------------------------
@@ -116,6 +117,51 @@ it_publishes_virtual_host(_Config) ->
               ?assertEqual(ExpectedPublish1, lists:sort(ActualPublish1))
           end).
 
+it_publishes_of_switch(_Config) ->
+    ?GIVEN(begin
+               publisher_server_is_running(),
+               [Vh, Ofs, OfPorts] = publish_ofs_args(string),
+               [VhBin, OfsBin, OfPortsBin] = publish_ofs_args(binary),
+               VhPatchpBin = <<VhBin/binary, "/Patchp">>,
+               [expect_dby_lib(Fun, Args, Ret)
+                || {Fun, Args, Ret} <-
+                       [{identifier_is_virtual_host, [VhBin], true},
+                        {identifier_exists, [OfsBin], false},
+                        {identifier_exists, [VhBin, '_'], true},
+                        {host_patch_panel, [VhBin], VhPatchpBin},
+                        {publish, 2, ok}]]
+           end),
+
+    ?WHEN(ex_publisher:publish_of_switch(Vh, Ofs, OfPorts)),
+
+    ?THEN(begin
+              {OfPortsDbyEps, BoundToLinks} =
+                  lists:mapfoldl(
+                    fun({P, Props}, Links) ->
+                            {PDbyID, PDbyMd} = of_port_dby_ep(OfsBin, VhBin, P,
+                                                              Props),
+                            VpToBound = proplists:get_value(<<"vp_to_bound">>,
+                                                            PDbyMd),
+                            {{PDbyID, proplists:delete(<<"vp_to_bound">>, PDbyMd)},
+                             [bound_to_dby_link(PDbyID, VpToBound) | Links]}
+                    end, [], OfPortsBin),
+              {OfsDbyId, _} = OfsDbyEp = of_switch_dby_ep(OfsBin),
+              Identifiers = [OfsDbyEp | OfPortsDbyEps],
+              Links1 = [
+                        [part_of_dby_link(Id, P)
+                         || P <- element(1, lists:unzip(OfPortsDbyEps))]
+                        || Id <- [OfsDbyId, VhPatchpBin]
+                       ],
+              Links2 = [part_of_dby_link(OfsBin, VhBin) | Links1 ++ BoundToLinks],
+              ExpectedPublish0 = lists:flatten(Identifiers ++ Links2),
+              ActualPublish = meck:capture(first, ex_dby_lib, publish, '_', 2),
+              {value, {_, ActualFun}, ActualPublish1} =
+                  lists:keytake(VhPatchpBin, 1, ActualPublish),
+              ?assert(is_function(ActualFun, 1)),
+              ExpectedPublish1 = lists:sort(ExpectedPublish0),
+              ?assertEqual(ExpectedPublish1, lists:sort(ActualPublish1))
+          end).
+
 
 %%--------------------------------------------------------------------
 %% Internal functions
@@ -133,6 +179,9 @@ publish_ph_args(Type) ->
 publish_vh_args(Type) ->
     ex_test_utils:publish_virtual_host_args(Type).
 
+publish_ofs_args(Type) ->
+    ex_test_utils:publish_of_switch_args(Type).
+
 physical_port_dby_ep(Ph, Port, PortProperties) ->
     ex_test_utils:physical_port(Ph, Port, PortProperties).
 
@@ -141,6 +190,9 @@ virtual_port_dby_ep(Vh, Port, PortProperties) ->
 
 vif_port_dby_ep(Vh, Port, PortProperties) ->
     ex_test_utils:vif_port(Vh, Port, PortProperties).
+
+of_port_dby_ep(Ofs, Vh, Port, PortProperties) ->
+    ex_test_utils:of_port(Ofs, Vh, Port, PortProperties).
 
 patch_panel_dby_ep(Ph, PatchP, AttachedPorts) ->
     ex_test_utils:patch_panel(Ph, PatchP, AttachedPorts).
@@ -153,6 +205,9 @@ physical_host_dby_ep(Ph) ->
 
 virtual_host_dby_ep(Vh) ->
     ex_test_utils:virtual_host(Vh).
+
+of_switch_dby_ep(Ofs) ->
+    ex_test_utils:of_switch(Ofs).
 
 part_of_dby_link(Src, Dst) ->
     ex_test_utils:part_of_link(Src, Dst).

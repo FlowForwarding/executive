@@ -47,19 +47,39 @@ publish_physical_host(ClusterPatchPanel, PhysicalHost, Ports) ->
 -spec publish_virtual_host(string(), string(), virt_ports(), vif_ports()) ->
                                   Result when
       Result :: ok |
-                {error, Reason | term()},
+                {error, Reason},
       Reason :: {physical_host_not_exists, PhysicalHost :: binary()} |
                 {not_physical_host, PhysicalHost :: binary()} |
                 {virtual_host_exists, VirtualHost :: binary()} |
                 {bad_virtual_port_to_bound, VirtualPortToBound :: binary(),
-                 VifPort :: binary()}.
+                 VifPort :: binary()} |
+                term().
 
 publish_virtual_host(PhysicalHost, VirtualHost, VirtualPorts, VifPorts) ->
     ex_publisher:publish_virtual_host(
       PhysicalHost, VirtualHost, VirtualPorts, VifPorts).
 
-publish_of_switch(VirtualHost, OFSwitch, Ports) ->
-    ok.
+
+%% @doc The publisher creates a structure for an OpenFow Switch in Dobby.
+%%
+%% It links the OFS to an existing Virtual Host. It creates the following
+%% identifiers:
+%% 1) OpenFlow Switch
+%% 2)OpenFlow Port
+%% All the identifiers created by the OFS publisher are prefixed
+%% with the OpenFlow Switch.  The publisher also creates appropriate links.
+-spec publish_of_switch(string(), string(), of_ports()) -> Result when
+      Result :: ok |
+                {error, Reason},
+      Reason :: {virtual_host_not_exists, VirtualHost :: binary()} |
+                {not_virtual_host, VirtualHost :: binary()} |
+                {virtual_port_to_bound_not_exists,
+                 VirtualPortToBound :: binary(), OfPort :: binary()} |
+                term().
+
+publish_of_switch(VirtualHost, OfSwitch, Ports) ->
+    ex_publisher:publish_of_switch(VirtualHost, OfSwitch, Ports).
+
 
 publsh_endpoint(VirtualHost, Endpoint, VirtualPortToBound) ->
     ok.

@@ -2,16 +2,20 @@
 
 -export([init/0,
          identifier_exists/1,
+         identifier_exists/2,
          identifier_is_physical_host/1,
+         identifier_is_virtual_host/1,
          host_patch_panel/1,
          update_patchp_wires/2,
          publish/2,
          physical_port/3,
          virtual_port/3,
          vif_port/3,
+         of_port/4,
          patch_panel/3,
          physical_host/1,
          virtual_host/1,
+         of_switch/1,
          part_of_link/2,
          bound_to_link/2,
          binarize/2]).
@@ -35,6 +39,13 @@ identifier_exists(Identifier) ->
                Identifier,
                [{max_depth, 0}]) =:= found.
 
+identifier_exists(PrefixIdentifeir, Identifier) ->
+    IdToFind = prefix(PrefixIdentifeir, Identifier),
+    dby:search(ex_dby_funs:mk_find_identifier(IdToFind),
+               ignored,
+               IdToFind,
+               [{max_depth, 0}]) =:= found.
+
 
 -spec identifier_is_physical_host(dby_identifier()) -> boolean() | not_found.
 
@@ -48,6 +59,21 @@ identifier_is_physical_host(Identifier) ->
             not_found;
         Other when is_binary(Other)->
             Other =:= <<"lm_ph">>
+    end.
+
+
+-spec identifier_is_virtual_host(dby_identifier()) -> boolean() | not_found.
+
+identifier_is_virtual_host(Identifier) ->
+    Type = dby:search(ex_dby_funs:mk_get_identifier_type(Identifier),
+                      ignored,
+                      Identifier,
+                      [{max_depth, 0}]),
+    case Type of
+        not_found ->
+            not_found;
+        Other when is_binary(Other)->
+            Other =:= <<"lm_vh">>
     end.
 
 
@@ -85,6 +111,11 @@ virtual_port(Vh, Id, Properties) when is_binary(Id) ->
 vif_port(Vh, Id, Properties) when is_binary(Id) ->
     {prefix(Vh, Id), [{<<"type">>, <<"lm_vp">>} | Properties]}.
 
+of_port(Ofs, Vh, Id, Properties0) when is_binary(Id) ->
+    Vp = proplists:get_value(K = <<"vp_to_bound">>, Properties0),
+    Properties1 = [{K, prefix(Vh, Vp)} | proplists:delete(K, Properties0)],
+    {prefix(Ofs, Id), [{<<"type">>, <<"lm_of_port">>} | Properties1]}.
+
 patch_panel(Host, Id, AttachedPorts) when is_binary(Id) ->
     Wires = maps:from_list([{P, null} || P <- AttachedPorts]),
     {prefix(Host, Id), [{<<"type">>, <<"lm_patchp">>}, {<<"wires">>, Wires}]}.
@@ -94,6 +125,9 @@ physical_host(Id) when is_binary(Id) ->
 
 virtual_host(Id) when is_binary(Id) ->
     {Id, [{<<"type">>, <<"lm_vh">>}]}.
+
+of_switch(Id) when is_binary(Id) ->
+    {Id, [{<<"type">>, <<"lm_of_switch">>}]}.
 
 part_of_link(Src, Dst) when is_binary(Src) andalso is_binary(Dst) ->
     {Src, Dst, [{<<"type">>, <<"part_of">>}]}.

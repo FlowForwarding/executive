@@ -2,13 +2,16 @@
 
 -export([publish_physical_host_args/1,
          publish_virtual_host_args/1,
+         publish_of_switch_args/1,
          physical_port/3,
          virtual_port/3,
          vif_port/3,
+         of_port/4,
          retrieve_virt_port_to_bound_for_vif/1,
          patch_panel/3,
          physical_host/1,
          virtual_host/1,
+         of_switch/1,
          part_of_link/2,
          bound_to_link/2]).
 
@@ -38,6 +41,16 @@ publish_virtual_host_args(binary) ->
     [ex_dby_lib:binarize(identifier, X) || X <-[Ph, Vh]]
         ++ [ex_dby_lib:binarize(ports, P) || P <- [VirtPorts, VifPorts]].
 
+publish_of_switch_args(string) ->
+    [_Vh = "PH1/VH1",
+     _OFS = "PH/VH1/OFS1",
+     _OPorts = [{"OFP1", #{vp_to_bound => "VP1"}},
+                {"OFP2", #{vp_to_bound => "VP2"}}]];
+publish_of_switch_args(binary) ->
+    [Vh, Ofs, OfPorts] = publish_of_switch_args(string),
+    [ex_dby_lib:binarize(identifier, X) || X <-[Vh,Ofs]]
+        ++ [ex_dby_lib:binarize(ports, OfPorts)].
+
 patch_panel(PhName, Name, AttachedPorts) ->
     Wires = maps:from_list([{P, null} || P <- AttachedPorts]),
     {prefix(PhName, Name), [{<<"type">>, <<"lm_patchp">>},
@@ -48,6 +61,9 @@ physical_host(Name) ->
 
 virtual_host(Name) ->
     {Name, [{<<"type">>, <<"lm_vh">>}]}.
+
+of_switch(Name) ->
+    {Name, [{<<"type">>, <<"lm_of_switch">>}]}.
 
 physical_port(PhName, Name, Properties) ->
     {prefix(PhName, Name), [{<<"type">>, <<"lm_pp">>} | Properties]}.
@@ -60,6 +76,12 @@ vif_port(VhName, Name, Properties0) ->
     Properties1 = [{K, prefix(VhName, VP)}
                    | proplists:delete(<<"vp_to_bound">>, Properties0)],
     {prefix(VhName, Name), [{<<"type">>, <<"lm_vp">>} | Properties1]}.
+
+of_port(OfsName, VhName, Name, Properties0) ->
+    VP = proplists:get_value(K = <<"vp_to_bound">>, Properties0),
+    Properties1 = [{K, prefix(VhName, VP)}
+                   | proplists:delete(<<"vp_to_bound">>, Properties0)],
+    {prefix(OfsName, Name), [{<<"type">>, <<"lm_of_port">>} | Properties1]}.
 
 retrieve_virt_port_to_bound_for_vif(Properites) ->
     K = <<"vp_to_bound">>,
