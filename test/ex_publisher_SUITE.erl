@@ -24,7 +24,8 @@ end_per_testcase(_TestCase, _Config) ->
 all() ->
     [it_publishes_physical_host,
      it_publishes_virtual_host,
-     it_publishes_of_switch].
+     it_publishes_of_switch,
+     it_publishes_endpoint].
 
 
 %%--------------------------------------------------------------------
@@ -163,6 +164,39 @@ it_publishes_of_switch(_Config) ->
           end).
 
 
+it_publishes_endpoint(_Config) ->
+    ?GIVEN(begin
+               publisher_server_is_running(),
+               [Vh, Ep, VpToBound] = publish_ep_args(string),
+               [VhBin, EpBin, VpToBoundBin] = publish_ep_args(binary),
+               VhPatchpBin = <<VhBin/binary, "/Patchp">>,
+               [expect_dby_lib(Fun, Args, Ret)
+                || {Fun, Args, Ret} <-
+                       [{identifier_is_virtual_host, [VhBin], true},
+                        {identifier_exists, [EpBin], false},
+                        {identifier_exists, [VhBin, VpToBoundBin], true},
+                        {host_patch_panel, [VhBin], VhPatchpBin},
+                        {publish, 2, ok}]]
+           end),
+
+    ?WHEN(ex_publisher:publish_endpoint(Vh, Ep, VpToBound)),
+
+    ?THEN(begin
+              Identifiers = [{EpDbyEp, _} = endpoint_dby_ep(EpBin)],
+              {VpToBoundDbyId, _} = virtual_port_dby_ep(VhBin, VpToBoundBin, []),
+              Links1 = [part_of_dby_link(Id, EpDbyEp) || Id <- [VhPatchpBin,
+                                                                VhBin]],
+              Links2 = [bound_to_dby_link(EpDbyEp, VpToBoundDbyId) | Links1],
+              ExpectedPublish0 = lists:flatten(Identifiers ++ Links2),
+              ActualPublish = meck:capture(first, ex_dby_lib, publish, '_', 2),
+              {value, {_, ActualFun}, ActualPublish1} =
+                  lists:keytake(VhPatchpBin, 1, ActualPublish),
+              ?assert(is_function(ActualFun, 1)),
+              ExpectedPublish1 = lists:sort(ExpectedPublish0),
+              ?assertEqual(ExpectedPublish1, lists:sort(ActualPublish1))
+          end).
+
+
 %%--------------------------------------------------------------------
 %% Internal functions
 %%--------------------------------------------------------------------
@@ -181,6 +215,9 @@ publish_vh_args(Type) ->
 
 publish_ofs_args(Type) ->
     ex_test_utils:publish_of_switch_args(Type).
+
+publish_ep_args(Type) ->
+    ex_test_utils:publish_endpoint_args(Type).
 
 physical_port_dby_ep(Ph, Port, PortProperties) ->
     ex_test_utils:physical_port(Ph, Port, PortProperties).
@@ -208,6 +245,9 @@ virtual_host_dby_ep(Vh) ->
 
 of_switch_dby_ep(Ofs) ->
     ex_test_utils:of_switch(Ofs).
+
+endpoint_dby_ep(Ep) ->
+    ex_test_utils:endpoint(Ep).
 
 part_of_dby_link(Src, Dst) ->
     ex_test_utils:part_of_link(Src, Dst).

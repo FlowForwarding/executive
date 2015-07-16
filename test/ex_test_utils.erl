@@ -3,6 +3,7 @@
 -export([publish_physical_host_args/1,
          publish_virtual_host_args/1,
          publish_of_switch_args/1,
+         publish_endpoint_args/1,
          physical_port/3,
          virtual_port/3,
          vif_port/3,
@@ -12,6 +13,7 @@
          physical_host/1,
          virtual_host/1,
          of_switch/1,
+         endpoint/1,
          part_of_link/2,
          bound_to_link/2]).
 
@@ -51,6 +53,11 @@ publish_of_switch_args(binary) ->
     [ex_dby_lib:binarize(identifier, X) || X <-[Vh,Ofs]]
         ++ [ex_dby_lib:binarize(ports, OfPorts)].
 
+publish_endpoint_args(string) ->
+    [_Vh = "PH1/VH1", _Ep = "EP1", _VpToBound = "VP1"];
+publish_endpoint_args(binary) ->
+    [ex_dby_lib:binarize(identifier, X) || X <- publish_endpoint_args(string)].
+
 patch_panel(PhName, Name, AttachedPorts) ->
     Wires = maps:from_list([{P, null} || P <- AttachedPorts]),
     {prefix(PhName, Name), [{<<"type">>, <<"lm_patchp">>},
@@ -64,6 +71,9 @@ virtual_host(Name) ->
 
 of_switch(Name) ->
     {Name, [{<<"type">>, <<"lm_of_switch">>}]}.
+
+endpoint(Name) ->
+    {Name, [{<<"type">>, <<"endpoint">>}]}.
 
 physical_port(PhName, Name, Properties) ->
     {prefix(PhName, Name), [{<<"type">>, <<"lm_pp">>} | Properties]}.

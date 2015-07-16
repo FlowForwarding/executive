@@ -11,7 +11,7 @@
          publish_physical_host/3,
          publish_virtual_host/4,
          publish_of_switch/3,
-         publsh_endpoint/3]).
+         publish_endpoint/3]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -23,8 +23,6 @@
 %% ------------------------------------------------------------------
 %% Records && Includes
 %% ------------------------------------------------------------------
-
--record(state, {}).
 
 -include("executive.hrl").
 -include("ex_logger.hrl").
@@ -59,8 +57,11 @@ publish_of_switch(VirtualHost, OfSwitch, Ports) ->
     gen_server:call(?SERVER, Req).
 
 
-publsh_endpoint(VirtualHost, Endpoint, VirtualPortToBound) ->
-    ok.
+-spec publish_endpoint(string(), string(), string()) -> ok | {error, term()}.
+
+publish_endpoint(VirtualHost, Endpoint, VirtualPortToBound) ->
+    Req = {pub_endpoint, VirtualHost, Endpoint, VirtualPortToBound},
+    gen_server:call(?SERVER, Req).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Definitions
@@ -116,7 +117,13 @@ format_req({pub_of_switch = ReqName, VirtualHost, OfSwitch, Ports}) ->
     {ReqName,
      ex_dby_lib:binarize(identifier, VirtualHost),
      ex_dby_lib:binarize(identifier, OfSwitch),
-     ex_dby_lib:binarize(ports, Ports)}.
+     ex_dby_lib:binarize(ports, Ports)};
+format_req({pub_endpoint = ReqName, VirtualHost, Endpoint, VpToBound}) ->
+    list_to_tuple([ReqName
+                   | [ex_dby_lib:binarize(identifier, Id)
+                      || Id <- [VirtualHost, Endpoint, VpToBound]]
+                  ]).
+
 
 validate_request({pub_phy_host, _, PhysicalHost, _}) ->
     ex_dby_lib:identifier_exists(PhysicalHost)
@@ -152,7 +159,20 @@ validate_request({pub_of_switch, VirtualHost, OfSwitch, Ports}) ->
          VpToBound = proplists:get_value(<<"vp_to_bound">>, Props),
          ex_dby_lib:identifier_exists(VirtualHost, VpToBound)
              orelse throw({virtual_port_to_bound_not_exists, VpToBound, P})
-     end || {P, Props} <- Ports].
+     end || {P, Props} <- Ports];
+validate_request({pub_endpoint, VirtualHost, Endpoint, VpToBound}) ->
+    case ex_dby_lib:identifier_is_virtual_host(VirtualHost) of
+        true ->
+            ok;
+        not_found ->
+            throw({virtual_host_not_exists, VirtualHost});
+        false ->
+            throw({not_virtual_host, VirtualHost})
+    end,
+    ex_dby_lib:identifier_exists(Endpoint) andalso throw(endpoint_exists),
+    ex_dby_lib:identifier_exists(VirtualHost, VpToBound)
+        orelse throw({virtual_port_to_bound_not_exists, VpToBound, Endpoint}).
+
 
 handle_request({pub_phy_host, ClusterPatchPanel, PhysicalHost, Ports}) ->
     PortsDbyEps = [ex_dby_lib:physical_port(PhysicalHost, P, Prop)
@@ -235,7 +255,18 @@ handle_request({pub_of_switch, VirtualHost, OfSwitch, Ports}) ->
              ],
     Links2 = [ex_dby_lib:part_of_link(OfSwitchDbyId, VirtualHost)
               | Links1 ++ BoundToLinks],
-    ex_dby_lib:publish(?PUBLISHER, lists:flatten(Identifiers ++ Links2)).
+    ex_dby_lib:publish(?PUBLISHER, lists:flatten(Identifiers ++ Links2));
+handle_request({pub_endpoint, VirtualHost, Endpoint, VpToBound}) ->
+    {EpDbyId, _} = EpDbyEp = ex_dby_lib:endpoint(Endpoint),
+    {VpToBoundDbyId, _} = ex_dby_lib:virtual_port(VirtualHost, VpToBound, []),
+    VhPatchpDbyId = ex_dby_lib:host_patch_panel(VirtualHost),
+    Identifiers = [EpDbyEp,
+                   ex_dby_lib:update_patchp_wires(VhPatchpDbyId, [EpDbyId])],
+    Links = [ex_dby_lib:bound_to_link(EpDbyId, VpToBoundDbyId)
+             | [ex_dby_lib:part_of_link(Id, EpDbyId) || Id <- [VhPatchpDbyId,
+                                                               VirtualHost]]],
+    ex_dby_lib:publish(?PUBLISHER, Identifiers ++ Links).
+
 
 
 

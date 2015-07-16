@@ -16,6 +16,7 @@
          physical_host/1,
          virtual_host/1,
          of_switch/1,
+         endpoint/1,
          part_of_link/2,
          bound_to_link/2,
          binarize/2]).
@@ -128,6 +129,9 @@ virtual_host(Id) when is_binary(Id) ->
 
 of_switch(Id) when is_binary(Id) ->
     {Id, [{<<"type">>, <<"lm_of_switch">>}]}.
+
+endpoint(Id) when is_binary(Id) ->
+    {Id, [{<<"type">>, <<"endpoint">>}]}.
 
 part_of_link(Src, Dst) when is_binary(Src) andalso is_binary(Dst) ->
     {Src, Dst, [{<<"type">>, <<"part_of">>}]}.

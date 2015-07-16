@@ -3,7 +3,7 @@
 -export([publish_physical_host/3,
          publish_virtual_host/4,
          publish_of_switch/3,
-         publsh_endpoint/3]).
+         publish_endpoint/3]).
 
 -include("executive.hrl").
 -include("ex_logger.hrl").
@@ -73,6 +73,7 @@ publish_virtual_host(PhysicalHost, VirtualHost, VirtualPorts, VifPorts) ->
                 {error, Reason},
       Reason :: {virtual_host_not_exists, VirtualHost :: binary()} |
                 {not_virtual_host, VirtualHost :: binary()} |
+                {of_switch_exists, OfSwitch :: binary()} |
                 {virtual_port_to_bound_not_exists,
                  VirtualPortToBound :: binary(), OfPort :: binary()} |
                 term().
@@ -81,8 +82,29 @@ publish_of_switch(VirtualHost, OfSwitch, Ports) ->
     ex_publisher:publish_of_switch(VirtualHost, OfSwitch, Ports).
 
 
-publsh_endpoint(VirtualHost, Endpoint, VirtualPortToBound) ->
-    ok.
+%% @doc The publisher creates a structure for an Endpoint in Dobby.
+%%
+%% It links the EP to an existing VH. The EP is attached to the VH Patch Panel
+%% as a ‘part_of’ and is bounded to the VP of VH.
+-spec publish_endpoint(string(), string(), string()) -> Result when
+      Result :: ok |
+                {error, Reason},
+      Reason :: {virtual_host_not_exists, VirtualHost :: binary()} |
+                {not_virtual_host, VirtualHost :: binary()} |
+                {endpoint_exists, Endpoint :: binary()} |
+                {virtual_port_to_bound_not_exists,
+                 VirtualPortToBound :: binary(), Endpoint :: binary()} |
+                term().
+
+publish_endpoint(VirtualHost, Endpoint, VirtualPortToBound) ->
+    ex_publisher:publish_endpoint(VirtualHost, Endpoint, VirtualPortToBound).
+
+
+
+
+
+
+
 
 
 
