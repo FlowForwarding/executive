@@ -74,11 +74,11 @@ It will be attached to the previously pbulished Physical Host `PH1`.
 
 ```erlang
 VirtualPorts = 
-   [{"VP1", [{mac_address, "00:00:00:00:01:AA"}, {interface , "eth0"}]},
-    {"VP2", [{mac_address, "00:00:00:00:01:AB"}, {interface , "eth1"}]}].
+   [{"VP1", #{mac_address => "00:00:00:00:01:AA", interface => "eth0"}},
+    {"VP2", #{mac_address => "00:00:00:00:01:AB", interface => "eth1"}}].
 VifPorts = 
-   [{"VP1.1", [{vp_to_bound, "VP1"}, {interface , "vif1.1"}]},
-    {"VP1.2", [{vp_to_bound, "VP2"}, {interface , "vif1.2"}]}].
+   [{"VP1.1", #{vp_to_bound => "VP1", interface => "vif1.1"}},
+    {"VP1.2", #{vp_to_bound => "VP2", interface => "vif1.2"}}].
 executive:publish_virtual_host("PH1", "PH1/VH1", VirtualPorts, VifPorts).
 ```
 
@@ -88,8 +88,8 @@ It will be attached to previously published Virtual Host `VH1`.
 
 ```erlang
 Ports = 
-   [{"OFP1", [{vp_to_bound, "VP1"}]},
-    {"OFP2", [{vp_to_bound, "VP2"}]}].
+   [{"OFP1", #{vp_to_bound => "VP1"}},
+    {"OFP2", #{vp_to_bound => "VP2"}}].
 executive:publish_of_switch("PH1/VH1", "PH1/VH1/OFS1",  Ports).
 ```
 
